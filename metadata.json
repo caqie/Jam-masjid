@@ -1,0 +1,5 @@
+{
+  "name": "Jam Digital Waktu Sholat",
+  "description": "Aplikasi jam digital dengan jadwal waktu sholat, latar belakang video, dan pengingat adzan.",
+  "requestFramePermissions": ["geolocation", "screen-wake-lock"]
+}
