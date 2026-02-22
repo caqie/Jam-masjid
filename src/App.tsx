@@ -28,6 +28,11 @@ interface PrayerData {
   };
 }
 
+interface MediaItem {
+  type: 'image' | 'video';
+  url: string;
+}
+
 interface AppSettings {
   city: string;
   country: string;
@@ -42,6 +47,7 @@ interface AppSettings {
   theme: 'digital' | 'analog';
   masjidAddress: string;
   prayerOffsets: Record<string, number>;
+  mediaList: MediaItem[];
 }
 
 const AnalogClock = ({ time }: { time: Date }) => {
@@ -122,6 +128,14 @@ export default function App() {
   const [adhanDefaultUrl, setAdhanDefaultUrl] = useState(() => localStorage.getItem('prayer_adhan_default') || 'https://www.islamcan.com/audio/adhan/azan2.mp3');
   const [enableAdhanAudio, setEnableAdhanAudio] = useState(() => localStorage.getItem('prayer_adhan_enabled') !== 'false');
   const [theme, setTheme] = useState<'digital' | 'analog'>(() => (localStorage.getItem('prayer_theme') as 'digital' | 'analog') || 'digital');
+  const [mediaList, setMediaList] = useState<MediaItem[]>(() => {
+    const saved = localStorage.getItem('prayer_media');
+    return saved ? JSON.parse(saved) : [
+      { type: 'image', url: 'https://picsum.photos/seed/masjid1/1920/1080' },
+      { type: 'image', url: 'https://picsum.photos/seed/masjid2/1920/1080' }
+    ];
+  });
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   
   const [isAdhanPlaying, setIsAdhanPlaying] = useState(false);
   const [isIqomahCountdown, setIsIqomahCountdown] = useState(false);
@@ -224,6 +238,7 @@ export default function App() {
       if (settings.theme) setTheme(settings.theme);
       if (settings.masjidAddress) setMasjidAddress(settings.masjidAddress);
       if (settings.prayerOffsets) setPrayerOffsets(settings.prayerOffsets);
+      if (settings.mediaList) setMediaList(settings.mediaList);
       
       if (settings.city) localStorage.setItem('prayer_city', settings.city);
       if (settings.country) localStorage.setItem('prayer_country', settings.country);
@@ -233,6 +248,7 @@ export default function App() {
       if (settings.iqomahDuration) localStorage.setItem('prayer_iqomah', String(settings.iqomahDuration));
       if (settings.masjidAddress) localStorage.setItem('prayer_address', settings.masjidAddress);
       if (settings.prayerOffsets) localStorage.setItem('prayer_offsets', JSON.stringify(settings.prayerOffsets));
+      if (settings.mediaList) localStorage.setItem('prayer_media', JSON.stringify(settings.mediaList));
       if (settings.adhanFajrUrl) localStorage.setItem('prayer_adhan_fajr', settings.adhanFajrUrl);
       if (settings.adhanDefaultUrl) localStorage.setItem('prayer_adhan_default', settings.adhanDefaultUrl);
       if (settings.enableAdhanAudio !== undefined) localStorage.setItem('prayer_adhan_enabled', String(settings.enableAdhanAudio));
@@ -255,7 +271,7 @@ export default function App() {
   // Sync settings to socket
   const syncSettings = (updates: Partial<AppSettings>) => {
     const currentSettings: AppSettings = {
-      city, country, isMuted, masjidName, masjidAddress, prayerOffsets, runningText, iqomahDuration,
+      city, country, isMuted, masjidName, masjidAddress, prayerOffsets, mediaList, runningText, iqomahDuration,
       adhanFajrUrl, adhanDefaultUrl, enableAdhanAudio, calculationMethod,
       theme,
       ...updates
@@ -287,7 +303,7 @@ export default function App() {
     return adjusted as PrayerTimings;
   }, [timings, prayerOffsets]);
 
-  // Update clock every second
+  // Update clock every second and rotate media
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
@@ -298,6 +314,12 @@ export default function App() {
         setIsIqomahCountdown(false);
       }
     }, 1000);
+
+    const mediaTimer = setInterval(() => {
+      if (mediaList.length > 0) {
+        setCurrentMediaIndex(prev => (prev + 1) % mediaList.length);
+      }
+    }, 10000); // Rotate every 10 seconds
     
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
@@ -307,10 +329,11 @@ export default function App() {
 
     return () => {
       clearInterval(timer);
+      clearInterval(mediaTimer);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [isIqomahCountdown, iqomahTimeLeft]);
+  }, [isIqomahCountdown, iqomahTimeLeft, mediaList.length]);
 
   // Fetch prayer times
   useEffect(() => {
@@ -439,7 +462,7 @@ export default function App() {
     syncSettings({ city: newCity, country: newCountry });
   };
 
-  const updateMasjidSettings = (name: string, text: string, iqomah: number, fajrUrl?: string, defaultUrl?: string, enabled?: boolean, method?: number, newTheme?: 'digital' | 'analog', address?: string, offsets?: Record<string, number>) => {
+  const updateMasjidSettings = (name: string, text: string, iqomah: number, fajrUrl?: string, defaultUrl?: string, enabled?: boolean, method?: number, newTheme?: 'digital' | 'analog', address?: string, offsets?: Record<string, number>, newMedia?: MediaItem[]) => {
     setMasjidName(name);
     setRunningText(text);
     setIqomahDuration(iqomah);
@@ -450,6 +473,7 @@ export default function App() {
     if (newTheme !== undefined) setTheme(newTheme);
     if (address !== undefined) setMasjidAddress(address);
     if (offsets !== undefined) setPrayerOffsets(offsets);
+    if (newMedia !== undefined) setMediaList(newMedia);
 
     localStorage.setItem('prayer_masjid', name);
     localStorage.setItem('prayer_text', text);
@@ -461,6 +485,7 @@ export default function App() {
     if (newTheme !== undefined) localStorage.setItem('prayer_theme', newTheme);
     if (address !== undefined) localStorage.setItem('prayer_address', address);
     if (offsets !== undefined) localStorage.setItem('prayer_offsets', JSON.stringify(offsets));
+    if (newMedia !== undefined) localStorage.setItem('prayer_media', JSON.stringify(newMedia));
 
     syncSettings({ 
       masjidName: name, 
@@ -472,7 +497,8 @@ export default function App() {
       calculationMethod: method !== undefined ? method : calculationMethod,
       theme: newTheme || theme,
       masjidAddress: address || masjidAddress,
-      prayerOffsets: offsets || prayerOffsets
+      prayerOffsets: offsets || prayerOffsets,
+      mediaList: newMedia || mediaList
     });
   };
 
@@ -879,6 +905,56 @@ export default function App() {
             )}
           </div>
         </motion.div>
+
+        {/* Media Carousel */}
+        {mediaList.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="mt-12 w-full max-w-5xl aspect-video rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl relative bg-black/40 backdrop-blur-md"
+          >
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentMediaIndex}
+                initial={{ opacity: 0, scale: 1.1 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 1 }}
+                className="absolute inset-0"
+              >
+                {mediaList[currentMediaIndex].type === 'image' ? (
+                  <img 
+                    src={mediaList[currentMediaIndex].url} 
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                    alt="Informasi Masjid"
+                  />
+                ) : (
+                  <video 
+                    src={mediaList[currentMediaIndex].url} 
+                    className="w-full h-full object-cover"
+                    autoPlay 
+                    muted 
+                    loop 
+                    playsInline
+                  />
+                )}
+                {/* Overlay for readability if needed */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+              </motion.div>
+            </AnimatePresence>
+            
+            {/* Indicators */}
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
+              {mediaList.map((_, idx) => (
+                <div 
+                  key={idx}
+                  className={`h-1.5 rounded-full transition-all duration-500 ${idx === currentMediaIndex ? 'w-8 bg-amber-400' : 'w-2 bg-white/20'}`}
+                />
+              ))}
+            </div>
+          </motion.div>
+        )}
 
         {/* Friday Special Info */}
         {isFriday && nextPrayer?.name === 'Dhuhr' && (
