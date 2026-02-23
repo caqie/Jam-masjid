@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { Volume2, VolumeX, MapPin, Clock, Settings, Smartphone, Tv, X, RefreshCw, Copy, Check, Maximize, Minimize } from 'lucide-react';
+import { Volume2, VolumeX, MapPin, Clock, Settings, Smartphone, Tv, X, RefreshCw, Copy, Check, Maximize, Minimize, Image, Trash2, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { io, Socket } from 'socket.io-client';
 import { QRCodeSVG } from 'qrcode.react';
@@ -48,6 +48,7 @@ interface AppSettings {
   masjidAddress: string;
   prayerOffsets: Record<string, number>;
   mediaList: MediaItem[];
+  digitalFont: string;
 }
 
 const AnalogClock = ({ time }: { time: Date }) => {
@@ -60,51 +61,86 @@ const AnalogClock = ({ time }: { time: Date }) => {
   const hourDegrees = ((hours % 12 + minutes / 60) / 12) * 360;
 
   return (
-    <div className="relative w-[300px] h-[300px] md:w-[500px] md:h-[500px] rounded-full border-8 border-white/10 flex items-center justify-center bg-black/20 backdrop-blur-xl shadow-2xl">
-      {/* Clock Face Markers */}
+    <div className="relative w-[320px] h-[320px] md:w-[520px] md:h-[520px] rounded-full flex items-center justify-center shadow-[0_0_100px_rgba(0,0,0,0.8),inset_0_0_40px_rgba(0,0,0,0.6)] group [--radius:125px] md:[--radius:215px] [--min-radius:135px] md:[--min-radius:230px]">
+      {/* Outer Metallic Bezel */}
+      <div className="absolute inset-0 rounded-full border-[12px] border-zinc-800 shadow-[inset_0_2px_10px_rgba(255,255,255,0.2),0_10px_30px_rgba(0,0,0,0.8)]" />
+      <div className="absolute inset-[4px] rounded-full border-[2px] border-zinc-700/50" />
+      
+      {/* Clock Face Background */}
+      <div className="absolute inset-[12px] rounded-full bg-gradient-to-br from-zinc-900 via-black to-zinc-900 overflow-hidden">
+        {/* Subtle Radial Pattern */}
+        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.1)_0%,transparent_70%)]" />
+      </div>
+
+      {/* Hour Markers */}
       {[...Array(12)].map((_, i) => (
         <div
           key={i}
-          className="absolute w-1 h-4 md:h-6 bg-white/20"
+          className="absolute w-1.5 md:w-2.5 h-6 md:h-10 bg-gradient-to-b from-amber-200 to-amber-500 rounded-sm shadow-[0_0_10px_rgba(251,191,36,0.3)]"
           style={{
-            transform: `rotate(${i * 30}deg) translateY(-130px) md:translateY(-220px)`,
+            transform: `rotate(${i * 30}deg) translateY(calc(-1 * var(--radius)))`,
+            transformOrigin: 'center'
+          }}
+        />
+      ))}
+
+      {/* Minute Markers */}
+      {[...Array(60)].map((_, i) => i % 5 !== 0 && (
+        <div
+          key={i}
+          className="absolute w-0.5 md:w-1 h-2 md:h-4 bg-white/20"
+          style={{
+            transform: `rotate(${i * 6}deg) translateY(calc(-1 * var(--min-radius)))`,
             transformOrigin: 'center'
           }}
         />
       ))}
       
       {/* Hour Hand */}
-      <div
-        className="absolute w-2 md:w-3 h-24 md:h-40 bg-white rounded-full"
+      <motion.div
+        className="absolute top-1/2 left-1/2 w-3 md:w-5 h-[25%] md:h-[30%] bg-gradient-to-b from-white via-zinc-200 to-zinc-400 rounded-full shadow-2xl z-10"
+        animate={{ rotate: hourDegrees }}
+        transition={{ type: "spring", stiffness: 50, damping: 20 }}
         style={{
-          transform: `rotate(${hourDegrees}deg) translateY(-50%)`,
-          transformOrigin: '50% 100%',
-          bottom: '50%'
+          transformOrigin: 'bottom center',
+          x: '-50%',
+          y: '-100%'
         }}
       />
       
       {/* Minute Hand */}
-      <div
-        className="absolute w-1.5 md:w-2 h-32 md:h-56 bg-amber-200 rounded-full"
+      <motion.div
+        className="absolute top-1/2 left-1/2 w-2 md:w-3.5 h-[35%] md:h-[42%] bg-gradient-to-b from-amber-100 via-amber-300 to-amber-500 rounded-full shadow-2xl z-20"
+        animate={{ rotate: minuteDegrees }}
+        transition={{ type: "spring", stiffness: 50, damping: 20 }}
         style={{
-          transform: `rotate(${minuteDegrees}deg) translateY(-50%)`,
-          transformOrigin: '50% 100%',
-          bottom: '50%'
+          transformOrigin: 'bottom center',
+          x: '-50%',
+          y: '-100%'
         }}
       />
       
       {/* Second Hand */}
-      <div
-        className="absolute w-0.5 md:w-1 h-36 md:h-64 bg-red-500 rounded-full"
+      <motion.div
+        className="absolute top-1/2 left-1/2 w-1 md:w-1.5 h-[45%] md:h-[50%] z-30 flex flex-col items-center"
+        animate={{ rotate: secondDegrees }}
+        transition={{ type: "spring", stiffness: 200, damping: 20 }}
         style={{
-          transform: `rotate(${secondDegrees}deg) translateY(-50%)`,
-          transformOrigin: '50% 100%',
-          bottom: '50%'
+          transformOrigin: '50% 85%',
+          x: '-50%',
+          y: '-85%'
         }}
-      />
+      >
+        <div className="w-full h-[85%] bg-red-600 rounded-full shadow-[0_0_15px_rgba(220,38,38,0.4)]" />
+        <div className="w-2 md:w-4 h-[15%] bg-red-800 rounded-full mt-[-2px]" />
+      </motion.div>
       
-      {/* Center Dot */}
-      <div className="absolute w-4 h-4 bg-white rounded-full shadow-lg z-10" />
+      {/* Center Cap */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-zinc-400 via-zinc-800 to-black shadow-2xl z-40 border border-white/10" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-zinc-400 z-50" />
+
+      {/* Glass Reflection */}
+      <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white/5 to-white/10 pointer-events-none z-[60]" />
     </div>
   );
 };
@@ -128,6 +164,7 @@ export default function App() {
   const [adhanDefaultUrl, setAdhanDefaultUrl] = useState(() => localStorage.getItem('prayer_adhan_default') || 'https://www.islamcan.com/audio/adhan/azan2.mp3');
   const [enableAdhanAudio, setEnableAdhanAudio] = useState(() => localStorage.getItem('prayer_adhan_enabled') !== 'false');
   const [theme, setTheme] = useState<'digital' | 'analog'>(() => (localStorage.getItem('prayer_theme') as 'digital' | 'analog') || 'digital');
+  const [digitalFont, setDigitalFont] = useState(() => localStorage.getItem('prayer_digital_font') || 'font-serif');
   const [mediaList, setMediaList] = useState<MediaItem[]>(() => {
     const saved = localStorage.getItem('prayer_media');
     return saved ? JSON.parse(saved) : [
@@ -148,6 +185,7 @@ export default function App() {
   const [wakeLock, setWakeLock] = useState<any>(null);
   const [copied, setCopied] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'masjid' | 'jadwal' | 'media' | 'tampilan'>('masjid');
   
   // Remote Control State
   const [roomId, setRoomId] = useState(() => {
@@ -239,6 +277,7 @@ export default function App() {
       if (settings.masjidAddress) setMasjidAddress(settings.masjidAddress);
       if (settings.prayerOffsets) setPrayerOffsets(settings.prayerOffsets);
       if (settings.mediaList) setMediaList(settings.mediaList);
+      if (settings.digitalFont) setDigitalFont(settings.digitalFont);
       
       if (settings.city) localStorage.setItem('prayer_city', settings.city);
       if (settings.country) localStorage.setItem('prayer_country', settings.country);
@@ -249,6 +288,7 @@ export default function App() {
       if (settings.masjidAddress) localStorage.setItem('prayer_address', settings.masjidAddress);
       if (settings.prayerOffsets) localStorage.setItem('prayer_offsets', JSON.stringify(settings.prayerOffsets));
       if (settings.mediaList) localStorage.setItem('prayer_media', JSON.stringify(settings.mediaList));
+      if (settings.digitalFont) localStorage.setItem('prayer_digital_font', settings.digitalFont);
       if (settings.adhanFajrUrl) localStorage.setItem('prayer_adhan_fajr', settings.adhanFajrUrl);
       if (settings.adhanDefaultUrl) localStorage.setItem('prayer_adhan_default', settings.adhanDefaultUrl);
       if (settings.enableAdhanAudio !== undefined) localStorage.setItem('prayer_adhan_enabled', String(settings.enableAdhanAudio));
@@ -271,9 +311,21 @@ export default function App() {
   // Sync settings to socket
   const syncSettings = (updates: Partial<AppSettings>) => {
     const currentSettings: AppSettings = {
-      city, country, isMuted, masjidName, masjidAddress, prayerOffsets, mediaList, runningText, iqomahDuration,
-      adhanFajrUrl, adhanDefaultUrl, enableAdhanAudio, calculationMethod,
+      city, 
+      country, 
+      isMuted, 
+      masjidName, 
+      masjidAddress, 
+      prayerOffsets, 
+      mediaList, 
+      runningText, 
+      iqomahDuration,
+      adhanFajrUrl, 
+      adhanDefaultUrl, 
+      enableAdhanAudio, 
+      calculationMethod,
       theme,
+      digitalFont,
       ...updates
     };
     if (socket) {
@@ -462,7 +514,7 @@ export default function App() {
     syncSettings({ city: newCity, country: newCountry });
   };
 
-  const updateMasjidSettings = (name: string, text: string, iqomah: number, fajrUrl?: string, defaultUrl?: string, enabled?: boolean, method?: number, newTheme?: 'digital' | 'analog', address?: string, offsets?: Record<string, number>, newMedia?: MediaItem[]) => {
+  const updateMasjidSettings = (name: string, text: string, iqomah: number, fajrUrl?: string, defaultUrl?: string, enabled?: boolean, method?: number, newTheme?: 'digital' | 'analog', address?: string, offsets?: Record<string, number>, newMedia?: MediaItem[], newFont?: string) => {
     setMasjidName(name);
     setRunningText(text);
     setIqomahDuration(iqomah);
@@ -474,6 +526,7 @@ export default function App() {
     if (address !== undefined) setMasjidAddress(address);
     if (offsets !== undefined) setPrayerOffsets(offsets);
     if (newMedia !== undefined) setMediaList(newMedia);
+    if (newFont !== undefined) setDigitalFont(newFont);
 
     localStorage.setItem('prayer_masjid', name);
     localStorage.setItem('prayer_text', text);
@@ -486,6 +539,7 @@ export default function App() {
     if (address !== undefined) localStorage.setItem('prayer_address', address);
     if (offsets !== undefined) localStorage.setItem('prayer_offsets', JSON.stringify(offsets));
     if (newMedia !== undefined) localStorage.setItem('prayer_media', JSON.stringify(newMedia));
+    if (newFont !== undefined) localStorage.setItem('prayer_digital_font', newFont);
 
     syncSettings({ 
       masjidName: name, 
@@ -498,7 +552,8 @@ export default function App() {
       theme: newTheme || theme,
       masjidAddress: address || masjidAddress,
       prayerOffsets: offsets || prayerOffsets,
-      mediaList: newMedia || mediaList
+      mediaList: newMedia || mediaList,
+      digitalFont: newFont || digitalFont
     });
   };
 
@@ -694,6 +749,65 @@ export default function App() {
             </div>
           </section>
 
+          {/* Media Carousel Section */}
+          <section className="space-y-3">
+            <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-white/40 ml-1">Media Carousel (Gambar/Video)</h2>
+            <div className="bg-zinc-900 rounded-[2rem] p-6 border border-white/5 space-y-5">
+              <div className="space-y-3">
+                {mediaList.map((item, index) => (
+                  <div key={index} className="flex gap-3 items-center bg-white/5 p-3 rounded-2xl border border-white/5">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[8px] font-bold uppercase tracking-widest text-emerald-500 mb-0.5">{item.type}</p>
+                      <p className="text-[10px] font-mono truncate opacity-40">{item.url}</p>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        const newList = mediaList.filter((_, i) => i !== index);
+                        updateMasjidSettings(masjidName, runningText, iqomahDuration, adhanFajrUrl, adhanDefaultUrl, enableAdhanAudio, calculationMethod, theme, masjidAddress, prayerOffsets, newList);
+                      }}
+                      className="p-2 bg-red-500/10 text-red-400 rounded-lg"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="pt-4 border-t border-white/5 space-y-3">
+                <div className="flex gap-2">
+                  <select 
+                    id="remote-media-type"
+                    className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs focus:border-emerald-500 outline-none"
+                  >
+                    <option value="image">Gambar</option>
+                    <option value="video">Video</option>
+                  </select>
+                  <input 
+                    id="remote-media-url"
+                    type="text" 
+                    placeholder="URL Media..."
+                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs focus:border-emerald-500 outline-none"
+                  />
+                </div>
+                <button 
+                  onClick={() => {
+                    const type = (document.getElementById('remote-media-type') as HTMLSelectElement).value as 'image' | 'video';
+                    const url = (document.getElementById('remote-media-url') as HTMLInputElement).value;
+                    if (url) {
+                      const newList = [...mediaList, { type, url }];
+                      updateMasjidSettings(masjidName, runningText, iqomahDuration, adhanFajrUrl, adhanDefaultUrl, enableAdhanAudio, calculationMethod, theme, masjidAddress, prayerOffsets, newList);
+                      (document.getElementById('remote-media-url') as HTMLInputElement).value = '';
+                    }
+                  }}
+                  className="w-full bg-emerald-600 py-3 rounded-xl font-bold text-sm hover:bg-emerald-500 transition-all flex items-center justify-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Tambah Media
+                </button>
+              </div>
+            </div>
+          </section>
+
           {/* Adhan Settings Section */}
           <section className="space-y-3">
             <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-white/40 ml-1">Pengaturan Adzan</h2>
@@ -793,7 +907,7 @@ export default function App() {
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-[#050505] text-white font-sans">
+    <div className="relative h-screen w-full overflow-hidden bg-[#050505] text-white font-sans flex flex-col">
       {/* Background Image - Kaaba / Mosque */}
       <div className="absolute inset-0 z-0">
         <img
@@ -816,258 +930,313 @@ export default function App() {
         }}
       />
 
-      {/* Header Info */}
-      <div className="relative z-10 flex items-center justify-between p-8 md:p-12">
-        <div className="flex items-center gap-8">
+      {/* Header Section */}
+      <header className="relative z-10 flex-none flex items-center justify-between p-6 md:p-8">
+        <div className="flex items-center gap-6">
           <div className="flex flex-col">
-            <h2 className="text-4xl md:text-6xl font-serif font-medium tracking-tight text-amber-200 drop-shadow-[0_2px_10px_rgba(251,191,36,0.3)]">
+            <h2 className="text-3xl md:text-5xl font-serif font-medium tracking-tight text-amber-200 drop-shadow-[0_2px_10px_rgba(251,191,36,0.3)]">
               {masjidName}
             </h2>
-            <p className="text-lg md:text-xl font-serif italic text-white/60 mt-1">
+            <p className="text-base md:text-lg font-serif italic text-white/60 mt-1">
               {masjidAddress}
             </p>
-            <div className="flex items-center gap-3 mt-3 opacity-70">
-              <MapPin className="h-4 w-4 text-amber-400" />
-              <p className="text-xl font-light tracking-wide">{city}, {country}</p>
-            </div>
           </div>
           {isOffline && (
             <div className="flex items-center gap-2 bg-red-500/20 px-4 py-1.5 rounded-full border border-red-500/30 backdrop-blur-md">
               <RefreshCw className="h-3 w-3 text-red-400 animate-spin" />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-red-400">Offline Mode</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-red-400">Offline</span>
             </div>
           )}
         </div>
 
-        <div className="flex items-center gap-6">
-          <div className="hidden md:flex flex-col items-end">
-             <div className="flex items-center gap-2 bg-white/5 px-5 py-2.5 rounded-full border border-white/10 backdrop-blur-xl">
-              <Smartphone className="h-4 w-4 text-amber-400 opacity-70" />
-              <span className="text-xs font-mono opacity-60 tracking-tighter">REMOTE ID: {roomId}</span>
-            </div>
-          </div>
-          <button 
-            onClick={toggleFullscreen}
-            className="rounded-full bg-white/5 p-4 backdrop-blur-xl border border-white/10 hover:bg-white/10 transition-all group"
-            title={isFullscreen ? "Keluar Fullscreen" : "Masuk Fullscreen"}
-          >
-            {isFullscreen ? <Minimize className="h-7 w-7 text-amber-400" /> : <Maximize className="h-7 w-7 text-amber-400 group-hover:scale-110 transition-transform" />}
-          </button>
-          <button 
-            onClick={toggleMute}
-            className="rounded-full bg-white/5 p-4 backdrop-blur-xl border border-white/10 hover:bg-white/10 transition-all group"
-          >
-            {isMuted ? <VolumeX className="h-7 w-7 text-red-400" /> : <Volume2 className="h-7 w-7 text-amber-400 group-hover:scale-110 transition-transform" />}
-          </button>
-          <button 
-            onClick={() => setShowSettings(!showSettings)}
-            className="rounded-full bg-white/5 p-4 backdrop-blur-xl border border-white/10 hover:bg-white/10 transition-all"
-          >
-            <Settings className="h-7 w-7 text-white/80" />
-          </button>
-        </div>
-      </div>
-
-      {/* Main Clock Section */}
-      <main className="relative z-10 flex flex-col items-center justify-center pt-8 md:pt-16">
-        <motion.div 
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center"
-        >
-          <div className="mb-4 inline-block px-6 py-1 border-y border-amber-500/30">
-             <p className="text-xl md:text-2xl font-serif italic text-amber-200/80 tracking-[0.3em] uppercase">
+        <div className="flex items-center gap-4">
+          <div className="flex flex-col items-end mr-4">
+             <p className="text-xl md:text-2xl font-serif italic text-amber-200/80 tracking-[0.2em] uppercase">
                 {format(currentTime, 'EEEE', { locale: id })}
              </p>
+             <p className="text-lg md:text-xl font-serif font-light text-white/90 tracking-[0.1em]">
+               {format(currentTime, 'd MMMM yyyy', { locale: id })}
+             </p>
           </div>
-          
-          {theme === 'digital' ? (
-            <h1 className="text-[12rem] md:text-[22rem] font-serif font-light tracking-tighter leading-none text-white drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
-              {format(currentTime, 'HH:mm')}
-              <span className="text-3xl md:text-7xl ml-6 opacity-30 font-mono font-thin align-top mt-12 inline-block">
-                {format(currentTime, 'ss')}
-              </span>
-            </h1>
-          ) : (
-            <div className="flex justify-center my-8">
-              <AnalogClock time={currentTime} />
-            </div>
-          )}
-          
-          <div className="mt-2 space-y-2">
-            <p className="text-3xl md:text-5xl font-serif font-light text-white/90 tracking-[0.15em]">
-              {format(currentTime, 'd MMMM yyyy', { locale: id })}
-            </p>
-            {hijriDate && (
-              <p className="text-2xl md:text-3xl font-serif italic text-amber-200/60 tracking-[0.1em]">
-                {hijriDate}
-              </p>
-            )}
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={toggleFullscreen}
+              className="rounded-full bg-white/5 p-3 backdrop-blur-xl border border-white/10 hover:bg-white/10 transition-all group"
+              title={isFullscreen ? "Keluar Fullscreen" : "Masuk Fullscreen"}
+            >
+              {isFullscreen ? <Minimize className="h-5 w-5 text-amber-400" /> : <Maximize className="h-5 w-5 text-amber-400 group-hover:scale-110 transition-transform" />}
+            </button>
+            <button 
+              onClick={toggleMute}
+              className="rounded-full bg-white/5 p-3 backdrop-blur-xl border border-white/10 hover:bg-white/10 transition-all group"
+            >
+              {isMuted ? <VolumeX className="h-5 w-5 text-red-400" /> : <Volume2 className="h-5 w-5 text-amber-400 group-hover:scale-110 transition-transform" />}
+            </button>
+            <button 
+              onClick={() => setShowSettings(!showSettings)}
+              className="rounded-full bg-white/5 p-3 backdrop-blur-xl border border-white/10 hover:bg-white/10 transition-all"
+            >
+              <Settings className="h-5 w-5 text-white/80" />
+            </button>
           </div>
-        </motion.div>
+        </div>
+      </header>
 
-        {/* Media Carousel */}
-        {mediaList.length > 0 && (
+      {/* Main Content Area */}
+      <main className="relative z-10 flex-1 flex flex-row items-center justify-between px-8 md:px-12 gap-8 min-h-0">
+        {/* Left Side: Clock & Hijri */}
+        <div className="flex-1 flex flex-col items-center justify-center">
           <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="mt-12 w-full max-w-5xl aspect-video rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl relative bg-black/40 backdrop-blur-md"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center"
           >
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentMediaIndex}
-                initial={{ opacity: 0, scale: 1.1 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 1 }}
-                className="absolute inset-0"
-              >
-                {mediaList[currentMediaIndex].type === 'image' ? (
-                  <img 
-                    src={mediaList[currentMediaIndex].url} 
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                    alt="Informasi Masjid"
-                  />
-                ) : (
-                  <video 
-                    src={mediaList[currentMediaIndex].url} 
-                    className="w-full h-full object-cover"
-                    autoPlay 
-                    muted 
-                    loop 
-                    playsInline
-                  />
+            {theme === 'digital' ? (
+              <div className="flex flex-col items-center">
+                <div className="flex items-center gap-8">
+                  <h1 className={`text-[10rem] md:text-[15rem] lg:text-[18rem] ${digitalFont} font-light tracking-tighter leading-none text-white drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]`}>
+                    {format(currentTime, 'HH:mm')}
+                  </h1>
+                  <div className="flex flex-col items-center justify-center bg-white/5 border border-white/10 rounded-[2rem] px-6 py-4 backdrop-blur-md self-center mt-8">
+                    <span className="text-4xl md:text-7xl text-amber-500 font-mono font-bold leading-none animate-pulse">
+                      {format(currentTime, 'ss')}
+                    </span>
+                    <span className="text-[10px] md:text-xs uppercase tracking-[0.3em] opacity-30 font-sans font-bold mt-2">Detik</span>
+                  </div>
+                </div>
+                {hijriDate && (
+                  <p className="text-xl md:text-3xl font-serif italic text-amber-200/60 tracking-[0.2em] mt-8">
+                    {hijriDate}
+                  </p>
                 )}
-                {/* Overlay for readability if needed */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-              </motion.div>
-            </AnimatePresence>
-            
-            {/* Indicators */}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
-              {mediaList.map((_, idx) => (
-                <div 
-                  key={idx}
-                  className={`h-1.5 rounded-full transition-all duration-500 ${idx === currentMediaIndex ? 'w-8 bg-amber-400' : 'w-2 bg-white/20'}`}
-                />
-              ))}
-            </div>
+              </div>
+            ) : (
+              <div className="scale-75 md:scale-90 lg:scale-100">
+                <AnalogClock time={currentTime} />
+                {hijriDate && (
+                  <p className="text-xl md:text-3xl font-serif italic text-amber-200/60 tracking-[0.2em] mt-8">
+                    {hijriDate}
+                  </p>
+                )}
+              </div>
+            )}
           </motion.div>
-        )}
 
-        {/* Friday Special Info */}
-        {isFriday && nextPrayer?.name === 'Dhuhr' && (
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="mt-10 bg-amber-600/20 border border-amber-500/40 px-12 py-5 rounded-[2rem] backdrop-blur-3xl shadow-[0_0_40px_rgba(217,119,6,0.2)]"
-          >
-            <h3 className="text-3xl font-serif italic tracking-[0.2em] text-amber-300">Persiapan Khutbah Jumat</h3>
-          </motion.div>
-        )}
+          {nextPrayer && !isIqomahCountdown && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mt-8 flex items-center gap-6 rounded-full bg-white/5 px-10 py-4 backdrop-blur-2xl border border-white/10"
+            >
+              <Clock className="h-4 w-4 text-amber-400" />
+              <span className="text-lg md:text-xl font-light tracking-[0.1em] uppercase">
+                Menuju <span className="text-amber-300 font-medium">{nextPrayer.label}</span> <span className="opacity-40 mx-2">—</span> {nextPrayer.time}
+              </span>
+            </motion.div>
+          )}
+        </div>
 
-        {nextPrayer && !isIqomahCountdown && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="mt-16 flex items-center gap-8 rounded-full bg-white/5 px-16 py-6 backdrop-blur-2xl border border-white/10 shadow-2xl"
-          >
-            <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center border border-amber-500/30">
-              <Clock className="h-5 w-5 text-amber-400" />
-            </div>
-            <span className="text-2xl font-light tracking-[0.1em] uppercase">
-              Menuju <span className="text-amber-300 font-medium">{nextPrayer.label}</span> <span className="opacity-40 mx-2">—</span> {nextPrayer.time}
-            </span>
-          </motion.div>
-        )}
+        {/* Right Side: Media Carousel */}
+        <div className="flex-1 h-full flex items-center justify-center py-4">
+          {mediaList.length > 0 && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="w-full h-full max-h-[60vh] aspect-video rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl relative bg-black/40 backdrop-blur-md"
+            >
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentMediaIndex}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.8 }}
+                  className="absolute inset-0"
+                >
+                  {mediaList[currentMediaIndex].type === 'image' ? (
+                    <img 
+                      src={mediaList[currentMediaIndex].url} 
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                      alt="Informasi Masjid"
+                    />
+                  ) : (
+                    <video 
+                      src={mediaList[currentMediaIndex].url} 
+                      className="w-full h-full object-cover"
+                      autoPlay 
+                      muted 
+                      loop 
+                      playsInline
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                </motion.div>
+              </AnimatePresence>
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+                {mediaList.map((_, idx) => (
+                  <div key={idx} className={`h-1 rounded-full transition-all duration-500 ${idx === currentMediaIndex ? 'w-6 bg-amber-400' : 'w-1.5 bg-white/20'}`} />
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </div>
       </main>
 
-      {/* Iqomah Countdown Overlay */}
+      {/* Footer Section: Prayer Times & Running Text */}
+      <footer className="relative z-10 flex-none p-6 md:p-8 space-y-6">
+        {/* Prayer Times Grid */}
+        <div className="grid grid-cols-7 gap-4 md:gap-6">
+          {prayerNames.map((prayer) => {
+            const time = adjustedTimings ? adjustedTimings[prayer.id as keyof PrayerTimings] : '--:--';
+            const isNext = nextPrayer?.name === prayer.id;
+            
+            return (
+              <div
+                key={prayer.id}
+                className={`relative overflow-hidden rounded-[1.5rem] p-4 md:p-6 backdrop-blur-3xl border transition-all duration-500 ${
+                  isNext 
+                    ? 'bg-amber-500/10 border-amber-500/40 shadow-[0_0_40px_rgba(251,191,36,0.2)]' 
+                    : 'bg-white/5 border-white/5'
+                }`}
+              >
+                <p className="text-sm md:text-base font-serif italic tracking-[0.1em] opacity-60 mb-2 text-amber-50/80">
+                  {prayer.label}
+                </p>
+                <p className="text-2xl md:text-4xl lg:text-5xl font-serif font-light tracking-tighter text-white">
+                  {time}
+                </p>
+                {isNext && (
+                  <div className="absolute top-4 right-4">
+                    <div className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Running Text */}
+        <div className="bg-black/40 backdrop-blur-xl border border-white/5 py-4 rounded-2xl overflow-hidden">
+          <div className="whitespace-nowrap animate-marquee inline-block">
+            <span className="text-2xl md:text-3xl font-serif italic tracking-wider mx-12 text-amber-100/80">
+              {runningText} <span className="mx-8 opacity-30">❈</span> {runningText} <span className="mx-8 opacity-30">❈</span> {runningText}
+            </span>
+          </div>
+        </div>
+
+        {/* Creator Credit */}
+        <div className="flex justify-center opacity-20">
+          <p className="text-[8px] uppercase tracking-[0.4em] font-serif italic text-amber-200">
+            Created by caqiestudioproduction
+          </p>
+        </div>
+      </footer>
+
+      {/* Overlays */}
       <AnimatePresence>
         {isIqomahCountdown && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-black/95 backdrop-blur-3xl"
+            className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-[#050505] overflow-hidden"
           >
-            <div className="absolute inset-0 opacity-10 pointer-events-none">
-               <img src="https://images.unsplash.com/photo-1542810634-71277d95dcbb?q=80&w=2070" className="w-full h-full object-cover" />
+            {/* Cinematic Background */}
+            <div className="absolute inset-0 z-0">
+              <img 
+                src="https://images.unsplash.com/photo-1542810634-71277d95dcbb?q=80&w=2070" 
+                className="w-full h-full object-cover opacity-20 scale-110 blur-sm" 
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/80" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.8)_100%)]" />
             </div>
-            <h2 className="text-6xl font-serif italic tracking-[0.4em] text-amber-500 mb-12">Menuju Iqomah</h2>
-            <div className="text-[18rem] md:text-[30rem] font-serif font-light leading-none text-white drop-shadow-[0_0_80px_rgba(251,191,36,0.2)]">
-              {Math.floor(iqomahTimeLeft / 60)}:{(iqomahTimeLeft % 60).toString().padStart(2, '0')}
+            
+            <div className="relative z-10 flex flex-col items-center w-full max-w-4xl px-6">
+              {/* Header Label */}
+              <motion.div
+                initial={{ y: -20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="mb-12 text-center"
+              >
+                <h2 className="text-4xl md:text-6xl font-serif italic tracking-[0.5em] text-amber-500 uppercase drop-shadow-[0_0_20px_rgba(251,191,36,0.5)]">
+                  Menuju Iqomah
+                </h2>
+                <div className="h-px w-32 bg-gradient-to-r from-transparent via-amber-500 to-transparent mx-auto mt-6 opacity-50" />
+              </motion.div>
+
+              {/* Progress Ring & Timer */}
+              <div className="relative flex items-center justify-center">
+                <svg className="w-[350px] h-[350px] md:w-[550px] md:h-[550px] -rotate-90">
+                  <circle
+                    cx="50%"
+                    cy="50%"
+                    r="46%"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="transparent"
+                    className="text-white/5"
+                  />
+                  <motion.circle
+                    cx="50%"
+                    cy="50%"
+                    r="46%"
+                    stroke="currentColor"
+                    strokeWidth="6"
+                    fill="transparent"
+                    strokeDasharray="100 100"
+                    initial={{ pathLength: 1 }}
+                    animate={{ pathLength: iqomahTimeLeft / (iqomahDuration * 60) }}
+                    transition={{ duration: 1, ease: "linear" }}
+                    className="text-amber-500"
+                    strokeLinecap="round"
+                  />
+                </svg>
+
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <div className="text-[10rem] md:text-[16rem] font-serif font-light leading-none text-white drop-shadow-[0_0_60px_rgba(255,255,255,0.1)] flex items-baseline">
+                    <span>{Math.floor(iqomahTimeLeft / 60)}</span>
+                    <span className="text-[6rem] md:text-[10rem] opacity-20 mx-2">:</span>
+                    <span>{(iqomahTimeLeft % 60).toString().padStart(2, '0')}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Message */}
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                className="mt-16 text-center"
+              >
+                <p className="text-2xl md:text-4xl font-serif italic text-white/80 tracking-widest">
+                  Luruskan dan Rapatkan Shaf
+                </p>
+                <p className="mt-4 text-sm md:text-lg font-serif italic text-amber-200/40 tracking-[0.3em] uppercase">
+                  Mohon matikan alat komunikasi
+                </p>
+              </motion.div>
             </div>
-            <p className="mt-12 text-4xl font-serif italic opacity-70 tracking-widest">Luruskan dan Rapatkan Shaf</p>
-            <button 
+
+            {/* Skip Button */}
+            <motion.button 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.4 }}
+              whileHover={{ opacity: 1, scale: 1.05 }}
               onClick={() => setIsIqomahCountdown(false)}
-              className="mt-20 rounded-full border border-amber-500/30 bg-amber-500/5 px-16 py-6 text-2xl font-serif italic tracking-widest hover:bg-amber-500 hover:text-black transition-all"
+              className="absolute bottom-12 rounded-full border border-white/10 bg-white/5 px-10 py-3 text-sm font-serif italic tracking-widest hover:bg-amber-500 hover:text-black transition-all z-20"
             >
               Lewati Hitung Mundur
-            </button>
+            </motion.button>
+
+            {/* Decorative Elements */}
+            <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-black to-transparent opacity-60" />
+            <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-black to-transparent opacity-60" />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Running Text */}
-      <div className="absolute bottom-44 md:bottom-64 left-0 right-0 z-10 bg-black/60 backdrop-blur-xl border-y border-white/5 py-6 overflow-hidden">
-        <div className="whitespace-nowrap animate-marquee inline-block">
-          <span className="text-3xl md:text-5xl font-serif italic tracking-wider mx-16 text-amber-100/80">
-            {runningText} <span className="mx-10 opacity-30">❈</span> {runningText} <span className="mx-10 opacity-30">❈</span> {runningText}
-          </span>
-        </div>
-      </div>
-
-      {/* Prayer Times Grid */}
-      <div className="absolute bottom-0 left-0 right-0 z-10 p-8 md:p-12">
-        <div className="mx-auto max-w-[98%]">
-          <div className="grid grid-cols-4 md:grid-cols-7 gap-6 md:gap-10">
-            {prayerNames.map((prayer) => {
-              const time = adjustedTimings ? adjustedTimings[prayer.id as keyof PrayerTimings] : '--:--';
-              const isNext = nextPrayer?.name === prayer.id;
-              
-              return (
-                <motion.div
-                  key={prayer.id}
-                  whileHover={{ y: -15, scale: 1.02 }}
-                  className={`relative overflow-hidden rounded-[2.5rem] p-8 md:p-12 backdrop-blur-3xl border transition-all duration-500 ${
-                    isNext 
-                      ? 'bg-amber-500/10 border-amber-500/40 shadow-[0_0_80px_rgba(251,191,36,0.25)]' 
-                      : 'bg-white/5 border-white/5'
-                  }`}
-                >
-                  <p className="text-lg md:text-2xl font-serif italic tracking-[0.1em] opacity-60 mb-6 text-amber-50/80">
-                    {prayer.label}
-                  </p>
-                  <p className="text-5xl md:text-7xl font-serif font-light tracking-tighter text-white">
-                    {time}
-                  </p>
-                  {isNext && (
-                    <div className="absolute top-8 right-8">
-                      <div className="h-4 w-4 rounded-full bg-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.8)] animate-pulse" />
-                    </div>
-                  )}
-                  {/* Subtle Ornament */}
-                  <div className="absolute -bottom-4 -right-4 opacity-5">
-                     <div className="w-24 h-24 border-4 border-amber-500 rounded-full rotate-45" />
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Creator Credit */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 opacity-20 hover:opacity-100 transition-opacity duration-500">
-        <p className="text-[10px] uppercase tracking-[0.5em] font-serif italic text-amber-200">
-          Created by caqiestudioproduction
-        </p>
-      </div>
-
-      {/* Adhan Playing Overlay */}
       <AnimatePresence>
         {isAdhanPlaying && (
           <motion.div 
@@ -1104,249 +1273,333 @@ export default function App() {
             className="fixed inset-0 z-50 flex items-center justify-center p-6"
           >
             <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={() => setShowSettings(false)} />
-            <div className="relative w-full max-w-6xl rounded-[4rem] bg-zinc-900 p-16 border border-white/10 shadow-2xl overflow-hidden">
-              <div className="grid md:grid-cols-2 gap-16">
-                <div className="space-y-8">
-                  <h3 className="text-4xl font-bold mb-10 flex items-center gap-4">
-                    <Settings className="text-emerald-500 h-10 w-10" />
-                    Panel Admin Masjid (Pengaturan Lokal)
-                  </h3>
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-widest opacity-50 mb-3">Nama Masjid/Mushola</label>
-                      <input 
-                        type="text" 
-                        value={masjidName}
-                        onChange={(e) => updateMasjidSettings(e.target.value, runningText, iqomahDuration, adhanFajrUrl, adhanDefaultUrl, enableAdhanAudio, calculationMethod, theme, masjidAddress, prayerOffsets)}
-                        className="w-full rounded-2xl bg-white/5 border border-white/10 p-6 focus:outline-none focus:border-emerald-500 transition-all text-2xl"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-widest opacity-50 mb-3">Alamat Masjid</label>
-                      <input 
-                        type="text" 
-                        value={masjidAddress}
-                        onChange={(e) => updateMasjidSettings(masjidName, runningText, iqomahDuration, adhanFajrUrl, adhanDefaultUrl, enableAdhanAudio, calculationMethod, theme, e.target.value, prayerOffsets)}
-                        className="w-full rounded-2xl bg-white/5 border border-white/10 p-6 focus:outline-none focus:border-emerald-500 transition-all text-xl"
-                        placeholder="Masukkan alamat lengkap..."
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-widest opacity-50 mb-3">Running Text</label>
-                      <textarea 
-                        value={runningText}
-                        onChange={(e) => updateMasjidSettings(masjidName, e.target.value, iqomahDuration, adhanFajrUrl, adhanDefaultUrl, enableAdhanAudio, calculationMethod, theme, masjidAddress, prayerOffsets)}
-                        className="w-full rounded-2xl bg-white/5 border border-white/10 p-6 focus:outline-none focus:border-emerald-500 transition-all text-xl h-32"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-6">
-                       <div>
-                        <label className="block text-xs font-semibold uppercase tracking-widest opacity-50 mb-3">Jeda Iqomah (Menit)</label>
-                        <input 
-                          type="number" 
-                          value={iqomahDuration}
-                          onChange={(e) => updateMasjidSettings(masjidName, runningText, Number(e.target.value))}
-                          className="w-full rounded-2xl bg-white/5 border border-white/10 p-6 focus:outline-none focus:border-emerald-500 transition-all text-2xl"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold uppercase tracking-widest opacity-50 mb-3">Metode Perhitungan</label>
-                        <select 
-                          value={calculationMethod}
-                          onChange={(e) => updateMasjidSettings(masjidName, runningText, iqomahDuration, adhanFajrUrl, adhanDefaultUrl, enableAdhanAudio, Number(e.target.value))}
-                          className="w-full rounded-2xl bg-white/5 border border-white/10 p-6 focus:outline-none focus:border-emerald-500 transition-all text-xl appearance-none"
-                        >
-                          <option value={20}>Kemenag Indonesia</option>
-                          <option value={1}>Karachi (Univ. of Islamic Sciences)</option>
-                          <option value={2}>ISNA (North America)</option>
-                          <option value={3}>MWL (Muslim World League)</option>
-                          <option value={4}>Umm al-Qura (Makkah)</option>
-                          <option value={5}>Egyptian General Authority</option>
-                          <option value={11}>Majlis Ugama Islam Singapura</option>
-                          <option value={12}>JAKIM Malaysia</option>
-                        </select>
-                      </div>
-                    </div>
+            <div className="relative w-[95vw] max-w-7xl h-[90vh] rounded-[3rem] bg-zinc-900 border border-white/10 shadow-2xl overflow-hidden flex flex-col">
+              {/* Modal Header */}
+              <div className="flex-none p-10 border-b border-white/5 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="bg-emerald-500 p-3 rounded-2xl">
+                    <Settings className="text-white h-8 w-8" />
+                  </div>
+                  <div>
+                    <h3 className="text-3xl font-bold">Panel Admin Masjid</h3>
+                    <p className="text-sm opacity-40 uppercase tracking-widest">Pengaturan Sistem & Kontrol Display</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowSettings(false)}
+                  className="p-4 rounded-full bg-white/5 hover:bg-white/10 transition-all"
+                >
+                  <X className="h-8 w-8" />
+                </button>
+              </div>
 
-                    <div className="grid grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-xs font-semibold uppercase tracking-widest opacity-50 mb-3">Kota</label>
-                        <input 
-                          type="text" 
-                          value={city}
-                          onChange={(e) => updateLocation(e.target.value, country)}
-                          className="w-full rounded-2xl bg-white/5 border border-white/10 p-6 focus:outline-none focus:border-emerald-500 transition-all text-2xl"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold uppercase tracking-widest opacity-50 mb-3">Negara</label>
-                        <input 
-                          type="text" 
-                          value={country}
-                          onChange={(e) => updateLocation(city, e.target.value)}
-                          className="w-full rounded-2xl bg-white/5 border border-white/10 p-6 focus:outline-none focus:border-emerald-500 transition-all text-2xl"
-                        />
-                      </div>
-                    </div>
+              <div className="flex-1 flex overflow-hidden">
+                {/* Sidebar Tabs */}
+                <div className="w-80 border-r border-white/5 p-8 space-y-2">
+                  {[
+                    { id: 'masjid', label: 'Identitas Masjid', icon: Tv },
+                    { id: 'jadwal', label: 'Koreksi Jadwal', icon: Clock },
+                    { id: 'media', label: 'Media Carousel', icon: Image },
+                    { id: 'tampilan', label: 'Tampilan & Suara', icon: Settings },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id as any)}
+                      className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all ${
+                        activeTab === tab.id 
+                          ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
+                          : 'hover:bg-white/5 text-white/60'
+                      }`}
+                    >
+                      <tab.icon className="h-5 w-5" />
+                      <span className="font-bold text-sm uppercase tracking-widest">{tab.label}</span>
+                    </button>
+                  ))}
 
-                    <div className="grid grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-xs font-semibold uppercase tracking-widest opacity-50 mb-3">Tema Jam</label>
-                        <select 
-                          value={theme}
-                          onChange={(e) => updateMasjidSettings(masjidName, runningText, iqomahDuration, adhanFajrUrl, adhanDefaultUrl, enableAdhanAudio, calculationMethod, e.target.value as 'digital' | 'analog')}
-                          className="w-full rounded-2xl bg-white/5 border border-white/10 p-6 focus:outline-none focus:border-emerald-500 transition-all text-xl appearance-none"
-                        >
-                          <option value="digital">Digital</option>
-                          <option value="analog">Analog</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="pt-6 border-t border-white/5 space-y-6">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xl font-medium">Layar Penuh (Fullscreen)</label>
-                        <button 
-                          onClick={toggleFullscreen}
-                          className="bg-blue-600 px-8 py-3 rounded-2xl font-bold hover:bg-blue-500 transition-all flex items-center gap-2"
-                        >
-                          {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
-                          {isFullscreen ? 'Keluar' : 'Aktifkan'}
+                  <div className="pt-10">
+                    <div className="bg-white/5 rounded-3xl p-6 border border-white/5 flex flex-col items-center">
+                      <QRCodeSVG value={remoteUrl} size={150} />
+                      <p className="mt-4 text-[10px] text-center opacity-40 uppercase tracking-widest font-bold">Remote Control HP</p>
+                      <div className="mt-4 flex items-center gap-2 bg-emerald-500/10 px-4 py-2 rounded-full border border-emerald-500/20">
+                        <span className="text-xs font-mono font-bold text-emerald-400">{roomId}</span>
+                        <button onClick={copyRemoteLink} className="text-emerald-400">
+                          {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                         </button>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <label className="text-xl font-medium">Aktifkan Suara Adzan</label>
-                        <button 
-                          onClick={() => updateMasjidSettings(masjidName, runningText, iqomahDuration, adhanFajrUrl, adhanDefaultUrl, !enableAdhanAudio)}
-                          className={`w-20 h-10 rounded-full transition-all relative ${enableAdhanAudio ? 'bg-emerald-500' : 'bg-zinc-700'}`}
-                        >
-                          <div className={`absolute top-1 w-8 h-8 rounded-full bg-white transition-all ${enableAdhanAudio ? 'right-1' : 'left-1'}`} />
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-2 gap-6">
-                        <div>
-                          <label className="block text-xs font-semibold uppercase tracking-widest opacity-50 mb-3">URL Adzan Subuh</label>
-                          <input 
-                            type="text" 
-                            value={adhanFajrUrl}
-                            onChange={(e) => updateMasjidSettings(masjidName, runningText, iqomahDuration, e.target.value, adhanDefaultUrl, enableAdhanAudio)}
-                            className="w-full rounded-2xl bg-white/5 border border-white/10 p-4 focus:outline-none focus:border-emerald-500 transition-all text-sm font-mono"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-semibold uppercase tracking-widest opacity-50 mb-3">URL Adzan Lainnya</label>
-                          <input 
-                            type="text" 
-                            value={adhanDefaultUrl}
-                            onChange={(e) => updateMasjidSettings(masjidName, runningText, iqomahDuration, adhanFajrUrl, e.target.value, enableAdhanAudio)}
-                            className="w-full rounded-2xl bg-white/5 border border-white/10 p-4 focus:outline-none focus:border-emerald-500 transition-all text-sm font-mono"
-                          />
-                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-8">
-                  <h3 className="text-4xl font-bold mb-10 flex items-center gap-4">
-                    <Clock className="text-amber-500 h-10 w-10" />
-                    Koreksi Jadwal (Menit)
-                  </h3>
-                  <div className="bg-white/5 rounded-3xl p-8 border border-white/10">
-                    <p className="text-xs opacity-50 mb-6 italic">Gunakan angka negatif (misal: -2) untuk mempercepat, atau positif (misal: 2) untuk memperlambat.</p>
-                    <div className="grid grid-cols-2 gap-6">
-                      {prayerNames.map(p => (
-                        <div key={p.id} className="space-y-2">
-                          <label className="text-[10px] font-bold uppercase tracking-widest text-amber-500">{p.label}</label>
+                {/* Tab Content */}
+                <div className="flex-1 overflow-y-auto p-12 custom-scrollbar">
+                  {activeTab === 'masjid' && (
+                    <div className="space-y-8 max-w-4xl">
+                      <div className="grid grid-cols-2 gap-8">
+                        <div className="col-span-2">
+                          <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500 mb-3">Nama Masjid/Mushola</label>
+                          <input 
+                            type="text" 
+                            value={masjidName}
+                            onChange={(e) => updateMasjidSettings(e.target.value, runningText, iqomahDuration, adhanFajrUrl, adhanDefaultUrl, enableAdhanAudio, calculationMethod, theme, masjidAddress, prayerOffsets, mediaList, digitalFont)}
+                            className="w-full rounded-2xl bg-white/5 border border-white/10 p-5 focus:outline-none focus:border-emerald-500 transition-all text-xl"
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500 mb-3">Alamat Masjid</label>
+                          <input 
+                            type="text" 
+                            value={masjidAddress}
+                            onChange={(e) => updateMasjidSettings(masjidName, runningText, iqomahDuration, adhanFajrUrl, adhanDefaultUrl, enableAdhanAudio, calculationMethod, theme, e.target.value, prayerOffsets, mediaList, digitalFont)}
+                            className="w-full rounded-2xl bg-white/5 border border-white/10 p-5 focus:outline-none focus:border-emerald-500 transition-all text-lg"
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500 mb-3">Running Text (Pengumuman)</label>
+                          <textarea 
+                            value={runningText}
+                            onChange={(e) => updateMasjidSettings(masjidName, e.target.value, iqomahDuration, adhanFajrUrl, adhanDefaultUrl, enableAdhanAudio, calculationMethod, theme, masjidAddress, prayerOffsets, mediaList, digitalFont)}
+                            className="w-full rounded-2xl bg-white/5 border border-white/10 p-5 focus:outline-none focus:border-emerald-500 transition-all text-lg h-32 resize-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500 mb-3">Jeda Iqomah (Menit)</label>
                           <input 
                             type="number" 
-                            value={prayerOffsets[p.id] || 0}
-                            onChange={(e) => {
-                              const newOffsets = { ...prayerOffsets, [p.id]: Number(e.target.value) };
-                              updateMasjidSettings(masjidName, runningText, iqomahDuration, adhanFajrUrl, adhanDefaultUrl, enableAdhanAudio, calculationMethod, theme, masjidAddress, newOffsets);
-                            }}
-                            className="w-full bg-black/20 border border-white/10 rounded-xl p-3 focus:border-amber-500 outline-none text-lg font-bold"
+                            value={iqomahDuration}
+                            onChange={(e) => updateMasjidSettings(masjidName, runningText, Number(e.target.value), adhanFajrUrl, adhanDefaultUrl, enableAdhanAudio, calculationMethod, theme, masjidAddress, prayerOffsets, mediaList, digitalFont)}
+                            className="w-full rounded-2xl bg-white/5 border border-white/10 p-5 focus:outline-none focus:border-emerald-500 transition-all text-xl"
                           />
                         </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col items-center justify-center bg-white/5 rounded-[3rem] p-12 border border-white/5">
-                    <div className="flex items-center gap-3 mb-8">
-                      <Smartphone className="text-emerald-400 h-8 w-8" />
-                      <h4 className="font-bold uppercase tracking-[0.2em] text-lg">Remote Control HP</h4>
-                    </div>
-                    <div className="bg-white p-6 rounded-[3rem] mb-10 shadow-2xl">
-                      <QRCodeSVG value={remoteUrl} size={280} />
-                    </div>
-                    <p className="text-center text-lg opacity-60 max-w-[300px] leading-relaxed">
-                      Scan QR ini untuk mengatur jam dan running text dari HP Pengurus
-                    </p>
-                    <div className="mt-8 bg-emerald-500/20 px-8 py-3 rounded-full border border-emerald-500/30 flex items-center gap-4">
-                      <span className="text-xl font-mono font-bold text-emerald-400">ROOM: {roomId}</span>
-                      <button 
-                        onClick={copyRemoteLink}
-                        className="p-2 hover:bg-white/10 rounded-full transition-colors"
-                        title="Salin Link Remote"
-                      >
-                        {copied ? <Check className="h-5 w-5 text-emerald-400" /> : <Copy className="h-5 w-5 text-emerald-400" />}
-                      </button>
-                    </div>
-
-                    <div className="mt-6 w-full px-8">
-                      <label className="block text-[10px] font-bold uppercase tracking-widest opacity-40 mb-2 text-center">Ganti Room ID (Manual)</label>
-                      <div className="flex gap-2">
-                        <input 
-                          type="text"
-                          placeholder="Masukkan ID..."
-                          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm font-mono focus:border-emerald-500 outline-none"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              changeRoomId((e.target as HTMLInputElement).value);
-                              (e.target as HTMLInputElement).value = '';
-                            }
-                          }}
-                        />
-                        <button 
-                          onClick={(e) => {
-                            const input = e.currentTarget.previousElementSibling as HTMLInputElement;
-                            changeRoomId(input.value);
-                            input.value = '';
-                          }}
-                          className="bg-emerald-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-emerald-500 transition-colors"
-                        >
-                          SET
-                        </button>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500 mb-3">Metode Perhitungan</label>
+                          <select 
+                            value={calculationMethod}
+                            onChange={(e) => updateMasjidSettings(masjidName, runningText, iqomahDuration, adhanFajrUrl, adhanDefaultUrl, enableAdhanAudio, Number(e.target.value), theme, masjidAddress, prayerOffsets, mediaList, digitalFont)}
+                            className="w-full rounded-2xl bg-white/5 border border-white/10 p-5 focus:outline-none focus:border-emerald-500 transition-all text-lg appearance-none"
+                          >
+                            <option value={20}>Kemenag Indonesia</option>
+                            <option value={1}>Karachi (Univ. of Islamic Sciences)</option>
+                            <option value={2}>ISNA (North America)</option>
+                            <option value={3}>MWL (Muslim World League)</option>
+                            <option value={4}>Umm al-Qura (Makkah)</option>
+                            <option value={5}>Egyptian General Authority</option>
+                            <option value={11}>Majlis Ugama Islam Singapura</option>
+                            <option value={12}>JAKIM Malaysia</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500 mb-3">Kota</label>
+                          <input 
+                            type="text" 
+                            value={city}
+                            onChange={(e) => updateLocation(e.target.value, country)}
+                            className="w-full rounded-2xl bg-white/5 border border-white/10 p-5 focus:outline-none focus:border-emerald-500 transition-all text-xl"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500 mb-3">Negara</label>
+                          <input 
+                            type="text" 
+                            value={country}
+                            onChange={(e) => updateLocation(city, e.target.value)}
+                            className="w-full rounded-2xl bg-white/5 border border-white/10 p-5 focus:outline-none focus:border-emerald-500 transition-all text-xl"
+                          />
+                        </div>
                       </div>
-                      <p className="text-[9px] opacity-40 mt-2 text-center">Berguna untuk vendor mengontrol TV klien dari jarak jauh</p>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Auto-Start Instructions */}
-                  <div className="mt-12 w-full pt-8 border-t border-white/5">
-                    <h5 className="text-amber-400 font-bold uppercase tracking-widest text-sm mb-4 flex items-center gap-2">
-                      <RefreshCw className="h-4 w-4" />
-                      Auto-Start (TV Android)
-                    </h5>
-                    <div className="text-xs opacity-60 space-y-2 leading-relaxed">
-                      <p>Agar aplikasi otomatis terbuka saat TV dinyalakan:</p>
-                      <ol className="list-decimal list-inside space-y-1">
-                        <li>Install <b>"Launch on Boot"</b> di Play Store TV.</li>
-                        <li>Aktifkan <b>"Enabled"</b> di aplikasi tersebut.</li>
-                        <li>Pilih <b>"Browser"</b> sebagai startup app.</li>
-                        <li>Masukkan URL aplikasi ini di browser TV.</li>
-                      </ol>
+                  {activeTab === 'jadwal' && (
+                    <div className="space-y-8 max-w-4xl">
+                      <div className="bg-amber-500/10 border border-amber-500/20 p-6 rounded-3xl mb-8">
+                        <p className="text-sm text-amber-200 leading-relaxed">
+                          Gunakan koreksi jadwal jika waktu sholat otomatis tidak sesuai dengan jadwal lokal. 
+                          Gunakan angka negatif (misal: -2) untuk mempercepat, atau positif (misal: 2) untuk memperlambat.
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-6">
+                        {prayerNames.map(p => (
+                          <div key={p.id} className="bg-white/5 p-6 rounded-3xl border border-white/5 flex items-center justify-between">
+                            <span className="font-bold uppercase tracking-widest text-sm text-amber-500">{p.label}</span>
+                            <div className="flex items-center gap-4">
+                              <input 
+                                type="number" 
+                                value={prayerOffsets[p.id] || 0}
+                                onChange={(e) => {
+                                  const newOffsets = { ...prayerOffsets, [p.id]: Number(e.target.value) };
+                                  updateMasjidSettings(masjidName, runningText, iqomahDuration, adhanFajrUrl, adhanDefaultUrl, enableAdhanAudio, calculationMethod, theme, masjidAddress, newOffsets, mediaList, digitalFont);
+                                }}
+                                className="w-24 bg-black/40 border border-white/10 rounded-xl p-3 focus:border-amber-500 outline-none text-center font-bold text-xl"
+                              />
+                              <span className="text-[10px] opacity-40 font-bold">MENIT</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
+
+                  {activeTab === 'media' && (
+                    <div className="space-y-8 max-w-4xl">
+                      <div className="grid grid-cols-1 gap-4">
+                        {mediaList.map((item, index) => (
+                          <div key={index} className="flex gap-6 items-center bg-white/5 p-6 rounded-3xl border border-white/5 group">
+                            <div className="h-20 w-32 rounded-xl overflow-hidden bg-black flex-none">
+                              {item.type === 'image' ? (
+                                <img src={item.url} className="w-full h-full object-cover opacity-60" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-emerald-500/20">
+                                  <Tv className="h-8 w-8 text-emerald-500" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-500 mb-1">{item.type}</p>
+                              <p className="text-sm font-mono truncate opacity-40">{item.url}</p>
+                            </div>
+                            <button 
+                              onClick={() => {
+                                const newList = mediaList.filter((_, i) => i !== index);
+                                updateMasjidSettings(masjidName, runningText, iqomahDuration, adhanFajrUrl, adhanDefaultUrl, enableAdhanAudio, calculationMethod, theme, masjidAddress, prayerOffsets, newList, digitalFont);
+                              }}
+                              className="p-4 bg-red-500/10 text-red-400 rounded-2xl hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                            >
+                              <Trash2 className="h-6 w-6" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <div className="pt-10 border-t border-white/5">
+                        <h4 className="text-xl font-bold mb-6">Tambah Media Baru</h4>
+                        <div className="flex gap-4 bg-white/5 p-6 rounded-[2.5rem] border border-white/5">
+                          <select 
+                            id="new-media-type"
+                            className="bg-zinc-800 border border-white/10 rounded-2xl px-6 py-4 text-sm focus:border-emerald-500 outline-none appearance-none"
+                          >
+                            <option value="image">Gambar</option>
+                            <option value="video">Video</option>
+                          </select>
+                          <input 
+                            id="new-media-url"
+                            type="text" 
+                            placeholder="URL Media (https://...)"
+                            className="flex-1 bg-zinc-800 border border-white/10 rounded-2xl px-6 py-4 text-sm focus:border-emerald-500 outline-none"
+                          />
+                          <button 
+                            onClick={() => {
+                              const type = (document.getElementById('new-media-type') as HTMLSelectElement).value as 'image' | 'video';
+                              const url = (document.getElementById('new-media-url') as HTMLInputElement).value;
+                              if (url) {
+                                const newList = [...mediaList, { type, url }];
+                                updateMasjidSettings(masjidName, runningText, iqomahDuration, adhanFajrUrl, adhanDefaultUrl, enableAdhanAudio, calculationMethod, theme, masjidAddress, prayerOffsets, newList, digitalFont);
+                                (document.getElementById('new-media-url') as HTMLInputElement).value = '';
+                              }
+                            }}
+                            className="bg-emerald-600 px-10 py-4 rounded-2xl font-bold hover:bg-emerald-500 transition-all flex items-center gap-2"
+                          >
+                            <Plus className="h-5 w-5" />
+                            TAMBAH
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeTab === 'tampilan' && (
+                    <div className="space-y-10 max-w-4xl">
+                      <div className="grid grid-cols-2 gap-8">
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500 mb-3">Tema Jam Utama</label>
+                          <div className="grid grid-cols-2 gap-4">
+                            {['digital', 'analog'].map((t) => (
+                              <button
+                                key={t}
+                                onClick={() => updateMasjidSettings(masjidName, runningText, iqomahDuration, adhanFajrUrl, adhanDefaultUrl, enableAdhanAudio, calculationMethod, t as any, masjidAddress, prayerOffsets, mediaList, digitalFont)}
+                                className={`py-4 rounded-2xl border transition-all font-bold uppercase tracking-widest text-xs ${
+                                  theme === t ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white/5 border-white/10 text-white/40'
+                                }`}
+                              >
+                                {t}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500 mb-3">Font Jam Digital</label>
+                          <select 
+                            value={digitalFont}
+                            onChange={(e) => updateMasjidSettings(masjidName, runningText, iqomahDuration, adhanFajrUrl, adhanDefaultUrl, enableAdhanAudio, calculationMethod, theme, masjidAddress, prayerOffsets, mediaList, e.target.value)}
+                            className="w-full rounded-2xl bg-white/5 border border-white/10 p-5 focus:outline-none focus:border-emerald-500 transition-all text-lg appearance-none"
+                          >
+                            <option value="font-serif">Cormorant (Serif)</option>
+                            <option value="font-sans">Inter (Sans)</option>
+                            <option value="font-mono">JetBrains (Mono)</option>
+                            <option value="font-digital">Orbitron (Digital)</option>
+                            <option value="font-bebas">Bebas Neue (Bold)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="pt-10 border-t border-white/5 space-y-8">
+                        <div className="flex items-center justify-between bg-white/5 p-6 rounded-3xl border border-white/5">
+                          <div>
+                            <p className="font-bold text-lg">Suara Adzan Otomatis</p>
+                            <p className="text-xs opacity-40">Putar audio saat waktu sholat tiba</p>
+                          </div>
+                          <button 
+                            onClick={() => updateMasjidSettings(masjidName, runningText, iqomahDuration, adhanFajrUrl, adhanDefaultUrl, !enableAdhanAudio, calculationMethod, theme, masjidAddress, prayerOffsets, mediaList, digitalFont)}
+                            className={`w-20 h-10 rounded-full transition-all relative ${enableAdhanAudio ? 'bg-emerald-500' : 'bg-zinc-700'}`}
+                          >
+                            <div className={`absolute top-1 w-8 h-8 rounded-full bg-white transition-all ${enableAdhanAudio ? 'right-1' : 'left-1'}`} />
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-6">
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500 mb-3">URL Adzan Subuh</label>
+                            <input 
+                              type="text" 
+                              value={adhanFajrUrl}
+                              onChange={(e) => updateMasjidSettings(masjidName, runningText, iqomahDuration, e.target.value, adhanDefaultUrl, enableAdhanAudio, calculationMethod, theme, masjidAddress, prayerOffsets, mediaList, digitalFont)}
+                              className="w-full rounded-2xl bg-white/5 border border-white/10 p-4 focus:outline-none focus:border-emerald-500 transition-all text-xs font-mono"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500 mb-3">URL Adzan Lainnya</label>
+                            <input 
+                              type="text" 
+                              value={adhanDefaultUrl}
+                              onChange={(e) => updateMasjidSettings(masjidName, runningText, iqomahDuration, adhanFajrUrl, e.target.value, enableAdhanAudio, calculationMethod, theme, masjidAddress, prayerOffsets, mediaList, digitalFont)}
+                              className="w-full rounded-2xl bg-white/5 border border-white/10 p-4 focus:outline-none focus:border-emerald-500 transition-all text-xs font-mono"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between bg-white/5 p-6 rounded-3xl border border-white/5">
+                          <div>
+                            <p className="font-bold text-lg">Layar Penuh (Fullscreen)</p>
+                            <p className="text-xs opacity-40">Optimalkan tampilan untuk TV</p>
+                          </div>
+                          <button 
+                            onClick={toggleFullscreen}
+                            className="bg-blue-600 px-10 py-4 rounded-2xl font-bold hover:bg-blue-500 transition-all flex items-center gap-3"
+                          >
+                            {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
+                            {isFullscreen ? 'KELUAR' : 'AKTIFKAN'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-              
+
               <button 
                 onClick={() => setShowSettings(false)}
-                className="mt-16 w-full rounded-[2rem] bg-emerald-600 p-8 font-bold text-2xl hover:bg-emerald-500 transition-all shadow-lg"
+                className="flex-none w-full bg-emerald-600 p-8 font-bold text-2xl hover:bg-emerald-500 transition-all shadow-lg"
               >
-                Simpan & Tutup
+                SIMPAN & TUTUP
               </button>
             </div>
           </motion.div>
