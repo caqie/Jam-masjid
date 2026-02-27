@@ -71,6 +71,32 @@ Access the **Panel Admin** by clicking the **Settings (Gear)** icon in the top r
 - **Adhan Audio**: Enable/Disable automatic Adhan playback and set custom URLs for the audio files.
 - **Fullscreen**: Optimize the display for TV screens.
 
+## 📺 Android TV / Smart TV Setup
+
+To use this application as a dedicated display on an Android TV or Smart TV, follow these steps to ensure it stays active and starts automatically:
+
+### 1. Progressive Web App (PWA)
+This application is a **PWA**, meaning it can be installed like a native app and works **offline**:
+- Open the application URL in your TV's browser (e.g., Chrome or Puffin).
+- Look for the "Add to Home Screen" or "Install App" option in the browser menu.
+- Once installed, the app will appear in your TV's app list.
+
+### 2. Auto-Start on Boot
+To make the application start automatically when the TV is turned on:
+- Install a "Launch on Boot" app from the Google Play Store (e.g., **Launch on Boot** or **AutoStart**).
+- Open the "Launch on Boot" app and select the **Masjid Digital Display** (or your browser with the app URL) as the startup app.
+- Enable the "Launch on Boot" service.
+
+### 3. Stay Awake (Standby Mode)
+The application includes a **Wake Lock** feature that prevents the TV from going to sleep while the display is active. 
+- Ensure you interact with the screen once (click or touch) after opening to activate the **Wake Lock** and **Fullscreen** mode.
+
+### 4. Offline Support
+The application automatically caches prayer times and assets. If the internet connection is lost:
+- The display will continue to show the last cached prayer times.
+- A "Mode Offline" indicator will appear to notify you.
+- Once the internet is restored, it will automatically synchronize with the latest data.
+
 ## 📱 Remote Control Setup
 
 1. Open the **Settings** panel on the main display.

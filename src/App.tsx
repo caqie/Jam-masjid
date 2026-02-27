@@ -190,6 +190,8 @@ export default function App() {
   const [copied, setCopied] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [activeTab, setActiveTab] = useState<'masjid' | 'jadwal' | 'media' | 'tampilan'>('masjid');
+  const [isTVMode, setIsTVMode] = useState(() => localStorage.getItem('prayer_tv_mode') === 'true');
+  const [burnInOffset, setBurnInOffset] = useState({ x: 0, y: 0 });
   
   // Remote Control State
   const [roomId, setRoomId] = useState(() => {
@@ -231,17 +233,19 @@ export default function App() {
           setWakeLock(lock);
           console.log('Wake Lock is active');
         } catch (err: any) {
-          // Silently fail if not allowed yet (needs user interaction)
           console.warn(`${err.name}, ${err.message}`);
         }
       }
     };
 
-    // Try requesting on mount, but also add a listener for first interaction
     requestWakeLock();
 
     const handleInteraction = () => {
       if (!wakeLock) requestWakeLock();
+      // On TV/Android, try to go fullscreen on first click
+      if (!isFullscreen && !isRemoteMode) {
+        toggleFullscreen();
+      }
       document.removeEventListener('click', handleInteraction);
       document.removeEventListener('touchstart', handleInteraction);
     };
@@ -256,8 +260,12 @@ export default function App() {
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, []);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('click', handleInteraction);
+      document.removeEventListener('touchstart', handleInteraction);
+    };
+  }, [wakeLock, isFullscreen, isRemoteMode]);
 
   // Initialize Socket
   useEffect(() => {
@@ -362,7 +370,16 @@ export default function App() {
   // Update clock every second and rotate media
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentTime(new Date());
+      const now = new Date();
+      setCurrentTime(now);
+      
+      // Update burn-in offset every minute in TV mode
+      if (isTVMode && now.getSeconds() === 0) {
+        setBurnInOffset({
+          x: (Math.random() - 0.5) * 10, // +/- 5px
+          y: (Math.random() - 0.5) * 10
+        });
+      }
       
       if (isIqomahCountdown && iqomahTimeLeft > 0) {
         setIqomahTimeLeft(prev => prev - 1);
@@ -647,65 +664,88 @@ export default function App() {
     return (
       <div className="min-h-screen bg-zinc-950 text-white font-sans flex flex-col selection:bg-emerald-500/30">
         {/* Mobile App Header */}
-        <header className="sticky top-0 z-20 bg-zinc-900/80 backdrop-blur-xl border-b border-white/5 p-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-emerald-500 p-2 rounded-xl shadow-lg shadow-emerald-500/20">
-              <Settings className="h-5 w-5 text-white" />
+        <header className="sticky top-0 z-50 bg-zinc-900/80 backdrop-blur-2xl border-b border-white/5 px-6 py-5 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="bg-gradient-to-br from-emerald-400 to-emerald-600 p-2.5 rounded-2xl shadow-lg shadow-emerald-500/20">
+              <Settings className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold leading-tight">Panel Admin Vendor</h1>
-              <p className="text-[10px] uppercase tracking-widest text-emerald-500 font-bold">Kontrol Jarak Jauh (Multi-Masjid)</p>
+              <h1 className="text-xl font-bold tracking-tight">Masjid Digital</h1>
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <p className="text-[10px] uppercase tracking-[0.2em] text-emerald-500 font-bold">Remote Controller</p>
+              </div>
             </div>
           </div>
-          <div className="flex flex-col items-end">
-            <span className="text-[10px] font-mono bg-white/5 px-2 py-1 rounded-md border border-white/10">ROOM: {roomId}</span>
+          <div className="flex flex-col items-end gap-1">
+            <span className="text-[10px] font-mono bg-white/5 px-3 py-1.5 rounded-full border border-white/10 text-white/60">ID: {roomId}</span>
           </div>
         </header>
 
-        <main className="flex-1 p-5 space-y-6 overflow-y-auto pb-24">
-          {/* Live Preview Card */}
-          <section className="space-y-3">
-            <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-white/40 ml-1">Live Preview (Running Text)</h2>
-            <div className="bg-zinc-900 rounded-3xl p-6 border border-white/5 overflow-hidden">
-              <div className="whitespace-nowrap animate-marquee inline-block">
-                <span className="text-xl font-serif italic text-amber-200/80">
-                  {runningText}
-                </span>
+        <main className="flex-1 p-6 space-y-8 overflow-y-auto pb-32 custom-scrollbar">
+          {/* Live Clock Preview */}
+          <section className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-amber-500 rounded-[2.5rem] blur opacity-20 group-hover:opacity-30 transition duration-1000"></div>
+            <div className="relative bg-zinc-900 rounded-[2.5rem] p-8 border border-white/10 flex flex-col items-center justify-center overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 opacity-10">
+                <Clock className="h-24 w-24" />
               </div>
+              <p className="text-[10px] uppercase tracking-[0.3em] text-emerald-500 font-bold mb-2">Live Time</p>
+              <h2 className="text-6xl font-mono font-light tracking-tighter text-white">
+                {format(currentTime, 'HH:mm')}
+                <span className="text-2xl text-emerald-500 ml-2 animate-pulse">{format(currentTime, 'ss')}</span>
+              </h2>
+              <p className="mt-2 text-xs text-white/40 font-serif italic tracking-widest">{hijriDate}</p>
             </div>
           </section>
 
-          {/* Quick Actions Card */}
-          <section className="space-y-3">
-            <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-white/40 ml-1">Kontrol Cepat</h2>
-            <div className="grid grid-cols-2 gap-3">
+          {/* Quick Actions Bento Grid */}
+          <section className="space-y-4">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-white/40">Kontrol Cepat</h2>
+              <div className="h-px flex-1 bg-white/5 mx-4" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <motion.button 
                 whileTap={{ scale: 0.95 }}
                 onClick={() => socket?.emit('trigger-action', { roomId, action: 'play-adhan' })}
-                className="bg-emerald-600 h-28 rounded-3xl flex flex-col items-center justify-center gap-2 shadow-xl shadow-emerald-900/20 active:bg-emerald-700 transition-colors"
+                className="bg-emerald-600 aspect-square rounded-[2rem] flex flex-col items-center justify-center gap-3 shadow-xl shadow-emerald-900/20 active:bg-emerald-700 transition-colors relative overflow-hidden group"
               >
-                <div className="bg-white/20 p-2 rounded-full">
-                  <Volume2 className="h-6 w-6" />
+                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="bg-white/20 p-4 rounded-2xl">
+                  <Volume2 className="h-8 w-8" />
                 </div>
-                <span className="font-bold text-sm">Tes Adzan</span>
+                <span className="font-bold text-sm tracking-wide">Tes Adzan</span>
               </motion.button>
+              
               <motion.button 
                 whileTap={{ scale: 0.95 }}
                 onClick={() => socket?.emit('trigger-action', { roomId, action: 'stop-adhan' })}
-                className="bg-zinc-800 h-28 rounded-3xl flex flex-col items-center justify-center gap-2 border border-white/5 active:bg-zinc-700 transition-colors"
+                className="bg-zinc-900 aspect-square rounded-[2rem] flex flex-col items-center justify-center gap-3 border border-white/10 active:bg-zinc-800 transition-colors group"
               >
-                <div className="bg-white/10 p-2 rounded-full">
-                  <X className="h-6 w-6" />
+                <div className="bg-white/5 p-4 rounded-2xl group-hover:bg-red-500/20 transition-colors">
+                  <X className="h-8 w-8 text-red-500" />
                 </div>
-                <span className="font-bold text-sm">Stop Adzan</span>
+                <span className="font-bold text-sm tracking-wide">Stop Adzan</span>
               </motion.button>
+
               <motion.button 
                 whileTap={{ scale: 0.95 }}
                 onClick={() => socket?.emit('trigger-action', { roomId, action: 'start-iqomah' })}
-                className="bg-amber-600 h-20 rounded-3xl flex items-center justify-center gap-3 col-span-2 shadow-xl shadow-amber-900/20 active:bg-amber-700 transition-colors"
+                className="bg-amber-600 h-24 rounded-[2rem] flex items-center justify-center gap-4 col-span-2 shadow-xl shadow-amber-900/20 active:bg-amber-700 transition-colors group overflow-hidden relative"
               >
-                <Clock className="h-5 w-5" />
-                <span className="font-bold">Mulai Hitung Mundur Iqomah</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                <Clock className="h-6 w-6" />
+                <span className="font-bold tracking-wide">Mulai Hitung Mundur Iqomah</span>
+              </motion.button>
+
+              <motion.button 
+                whileTap={{ scale: 0.95 }}
+                onClick={() => socket?.emit('trigger-action', { roomId, action: 'skip-iqomah' })}
+                className="bg-zinc-900 h-20 rounded-[2rem] flex items-center justify-center gap-4 col-span-2 border border-white/10 active:bg-zinc-800 transition-colors"
+              >
+                <Minimize className="h-5 w-5 text-amber-500" />
+                <span className="font-bold text-sm tracking-wide">Lewati Iqomah</span>
               </motion.button>
             </div>
           </section>
@@ -1050,7 +1090,12 @@ export default function App() {
       {/* Main Content Area */}
       <main className="relative z-10 flex-1 flex flex-col lg:flex-row items-center justify-center lg:justify-between px-4 sm:px-6 md:px-12 gap-4 sm:gap-6 lg:gap-12 min-h-0 overflow-hidden">
         {/* Left Side: Clock & Hijri */}
-        <div className="flex-1 flex flex-col items-center justify-center w-full min-h-0">
+        <div 
+          className="flex-1 flex flex-col items-center justify-center w-full min-h-0 transition-all duration-[10000ms] ease-in-out"
+          style={{ 
+            transform: isTVMode ? `translate(${burnInOffset.x}px, ${burnInOffset.y}px)` : 'none' 
+          }}
+        >
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1640,6 +1685,31 @@ export default function App() {
                       </div>
 
                       <div className="pt-6 sm:pt-10 border-t border-white/5 space-y-6 sm:space-y-8">
+                        <div className="flex items-center justify-between bg-white/5 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-white/5">
+                          <div>
+                            <p className="font-bold text-base sm:text-lg">TV Mode (Kiosk)</p>
+                            <p className="text-[10px] sm:text-xs opacity-40">Optimalkan untuk Smart TV (Auto-fullscreen & Always On)</p>
+                            {isTVMode && (
+                              <div className="mt-2 p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                                <p className="text-[9px] text-emerald-400 leading-relaxed uppercase tracking-wider font-bold">
+                                  Tips: Gunakan aplikasi "Launch on Boot" di Android TV Store agar aplikasi ini otomatis terbuka saat TV dinyalakan.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                          <button 
+                            onClick={() => {
+                              const newVal = !isTVMode;
+                              setIsTVMode(newVal);
+                              localStorage.setItem('prayer_tv_mode', String(newVal));
+                              if (newVal) toggleFullscreen();
+                            }}
+                            className={`w-16 sm:w-20 h-8 sm:h-10 rounded-full transition-all relative ${isTVMode ? 'bg-emerald-500' : 'bg-zinc-700'}`}
+                          >
+                            <div className={`absolute top-1 w-6 sm:w-8 h-6 sm:h-8 rounded-full bg-white transition-all ${isTVMode ? 'right-1' : 'left-1'}`} />
+                          </button>
+                        </div>
+
                         <div className="flex items-center justify-between bg-white/5 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-white/5">
                           <div>
                             <p className="font-bold text-base sm:text-lg">Suara Adzan Otomatis</p>
