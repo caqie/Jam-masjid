@@ -242,8 +242,8 @@ export default function App() {
 
     const handleInteraction = () => {
       if (!wakeLock) requestWakeLock();
-      // On TV/Android, try to go fullscreen on first click
-      if (!isFullscreen && !isRemoteMode) {
+      // On TV/Android, try to go fullscreen on first click if TV mode is enabled
+      if (isTVMode && !isFullscreen && !isRemoteMode && document.fullscreenEnabled) {
         toggleFullscreen();
       }
       document.removeEventListener('click', handleInteraction);
@@ -265,7 +265,7 @@ export default function App() {
       document.removeEventListener('click', handleInteraction);
       document.removeEventListener('touchstart', handleInteraction);
     };
-  }, [wakeLock, isFullscreen, isRemoteMode]);
+  }, [wakeLock, isFullscreen, isRemoteMode, isTVMode]);
 
   // Initialize Socket
   useEffect(() => {
@@ -538,15 +538,23 @@ export default function App() {
   };
 
   const toggleFullscreen = () => {
+    if (!document.fullscreenEnabled) {
+      console.warn('Fullscreen is not enabled in this browser or context.');
+      return;
+    }
+
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(err => {
-        console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+        // Silently handle permission errors which are common in iframes or non-gesture calls
+        if (err.name === 'NotAllowedError' || err.message.includes('Permissions check failed')) {
+          console.warn('Fullscreen request denied. This is expected if not triggered by a user gesture or if running in a restricted iframe.');
+        } else {
+          console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+        }
       });
-      setIsFullscreen(true);
     } else {
       if (document.exitFullscreen) {
         document.exitFullscreen();
-        setIsFullscreen(false);
       }
     }
   };
